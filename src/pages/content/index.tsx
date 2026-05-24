@@ -180,7 +180,11 @@ async function initializeFeatures(): Promise<void> {
       return;
     }
 
-    if (location.hostname === 'gemini.google.com') {
+    const isGeminiHost = location.hostname === 'gemini.google.com';
+    const isChatGPTHost =
+      location.hostname === 'chatgpt.com' || location.hostname === 'chat.openai.com';
+
+    if (isGeminiHost || isChatGPTHost) {
       // Timeline is most resource-intensive, start it first
       startTimeline();
       await delay(HEAVY_FEATURE_INIT_DELAY);
@@ -221,8 +225,10 @@ async function initializeFeatures(): Promise<void> {
       startInputCollapse();
       await delay(LIGHT_FEATURE_INIT_DELAY);
 
-      startInputHaloHider();
-      await delay(LIGHT_FEATURE_INIT_DELAY);
+      if (isGeminiHost) {
+        startInputHaloHider();
+        await delay(LIGHT_FEATURE_INIT_DELAY);
+      }
 
       inputVimModeCleanup = await startInputVimMode();
       await delay(LIGHT_FEATURE_INIT_DELAY);
@@ -255,48 +261,62 @@ async function initializeFeatures(): Promise<void> {
       }
       await delay(LIGHT_FEATURE_INIT_DELAY);
 
-      startTitleUpdater();
-      await delay(LIGHT_FEATURE_INIT_DELAY);
+      if (isGeminiHost) {
+        startTitleUpdater();
+        await delay(LIGHT_FEATURE_INIT_DELAY);
+      }
 
-      startDeepResearchExport();
-      await delay(LIGHT_FEATURE_INIT_DELAY);
+      if (isGeminiHost) {
+        startDeepResearchExport();
+        await delay(LIGHT_FEATURE_INIT_DELAY);
+      }
 
       startContextSync();
       await delay(LIGHT_FEATURE_INIT_DELAY);
 
       // Send behavior (Ctrl+Enter to send)
-      sendBehaviorCleanup = await startSendBehavior('gemini');
-      await delay(LIGHT_FEATURE_INIT_DELAY);
+      if (isGeminiHost) {
+        sendBehaviorCleanup = await startSendBehavior('gemini');
+        await delay(LIGHT_FEATURE_INIT_DELAY);
+      }
 
       // Draft auto-save
       draftSaveCleanup = await startDraftSave();
       await delay(LIGHT_FEATURE_INIT_DELAY);
 
       // Gems hider - hide/show toggle for Gems list section
-      startGemsHider();
-      await delay(LIGHT_FEATURE_INIT_DELAY);
+      if (isGeminiHost) {
+        startGemsHider();
+        await delay(LIGHT_FEATURE_INIT_DELAY);
+      }
 
       // Gems sidebar — recent gems list injected above Notebooks, populated
       // from a local cache that's refreshed whenever the user visits the
       // /gems/view management page. Count is controlled from the popup.
-      gemsSidebarCleanup = await startGemsSidebar();
-      await delay(LIGHT_FEATURE_INIT_DELAY);
+      if (isGeminiHost) {
+        gemsSidebarCleanup = await startGemsSidebar();
+        await delay(LIGHT_FEATURE_INIT_DELAY);
+      }
 
       // Markdown Patcher - fixes broken bold tags due to HTML injection
       startMarkdownPatcher();
       await delay(LIGHT_FEATURE_INIT_DELAY);
 
       // Default Model Manager
-      DefaultModelManager.getInstance().init();
-      await delay(LIGHT_FEATURE_INIT_DELAY);
+      if (isGeminiHost) {
+        DefaultModelManager.getInstance().init();
+        await delay(LIGHT_FEATURE_INIT_DELAY);
+      }
 
       startExportButton();
       await delay(LIGHT_FEATURE_INIT_DELAY);
 
-      void startCanvasExport();
-      await delay(LIGHT_FEATURE_INIT_DELAY);
+      if (isGeminiHost) {
+        void startCanvasExport();
+        await delay(LIGHT_FEATURE_INIT_DELAY);
+      }
 
-      if (await isForkFeatureEnabled()) {
+      if (isGeminiHost && (await isForkFeatureEnabled())) {
         forkCleanup = startFork();
         await delay(LIGHT_FEATURE_INIT_DELAY);
       }
@@ -449,7 +469,9 @@ function handleVisibilityChange(): void {
       hostname.includes('gemini.google.com') ||
       hostname.includes('business.gemini.google') ||
       hostname.includes('aistudio.google.com') ||
-      hostname.includes('aistudio.google.cn');
+      hostname.includes('aistudio.google.cn') ||
+      hostname.includes('chatgpt.com') ||
+      hostname.includes('chat.openai.com');
 
     // Initialize KaTeX configuration early to suppress Unicode warnings
     // This must run before any formulas are rendered on the page
